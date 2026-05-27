@@ -30,12 +30,10 @@ cp monitor.py "$MONITOR"
 chmod +x "$MONITOR"
 
 # ── statusLine script ──────────────────────────────────────────────────────────
-cat > "$STATUSLINE" << 'EOF'
+cat > "$STATUSLINE" << EOF
 #!/bin/sh
-"$HOME/.claude/scripts/venv/bin/python3" "$HOME/.claude/scripts/usage-monitor.py" --statusline 2>/dev/null
+$VENV/bin/python3 $MONITOR --statusline 2>/dev/null
 EOF
-# expand $HOME at write time
-sed -i "s|\$HOME|$HOME|g" "$STATUSLINE"
 chmod +x "$STATUSLINE"
 
 # ── settings.json — add statusLine ────────────────────────────────────────────
@@ -43,12 +41,12 @@ if [ -f "$SETTINGS" ]; then
     if grep -q '"statusLine"' "$SETTINGS"; then
         echo "→ statusLine already configured in settings.json, skipping."
     else
-        python3 - "$SETTINGS" << 'PYEOF'
+        python3 - "$SETTINGS" "$STATUSLINE" << 'PYEOF'
 import json, sys
-path = sys.argv[1]
+path, statusline_path = sys.argv[1], sys.argv[2]
 with open(path) as f:
     cfg = json.load(f)
-cfg["statusLine"] = {"type": "command", "command": f"{__import__('pathlib').Path.home()}/.claude/statusline-command.sh"}
+cfg["statusLine"] = {"type": "command", "command": statusline_path}
 with open(path, "w") as f:
     json.dump(cfg, f, indent=2)
     f.write("\n")
@@ -59,21 +57,10 @@ else
     echo "→ ~/.claude/settings.json not found, skipping statusLine setup."
 fi
 
-# ── shell alias ────────────────────────────────────────────────────────────────
-ALIAS_LINE="alias ccmon='$VENV/bin/python3 $MONITOR'"
-
-for RC in "$HOME/.zshrc" "$HOME/.bashrc"; do
-    if [ -f "$RC" ] && ! grep -q "alias ccmon=" "$RC"; then
-        printf "\n# Claude Usage Monitor\n%s\n" "$ALIAS_LINE" >> "$RC"
-        echo "→ alias 'ccmon' added to $RC"
-    fi
-done
-
 echo ""
-echo "Done! Restart your terminal (or run: source ~/.zshrc / source ~/.bashrc)"
+echo "Done! Restart Claude Code to activate the statusLine."
 echo ""
-echo "  ccmon          — live monitor"
-echo "  ccmon --once   — print once and exit"
-echo "  ccmon --compact — one-line output (tmux etc.)"
+echo "The usage info will appear below the input prompt automatically."
 echo ""
-echo "Restart Claude Code to activate the statusLine."
+echo "To run the full live monitor manually:"
+echo "  $VENV/bin/python3 $MONITOR"
