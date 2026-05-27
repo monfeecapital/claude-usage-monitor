@@ -4,8 +4,6 @@ Real-time Claude Code usage monitor. Shows the same data as the Claude app — c
 
 **Works on:** macOS · Linux · WSL
 
-> For Windows native (non-WSL), see [Claude-Code-Usage-Monitor](https://github.com/CodeZeno/Claude-Code-Usage-Monitor) which has a taskbar tray icon.
-
 ---
 
 ## What it looks like
