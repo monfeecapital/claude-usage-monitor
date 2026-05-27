@@ -69,7 +69,7 @@ def read_cache() -> dict | None:
     """Return cached data if fresher than 5 minutes."""
     try:
         obj = json.loads(CACHE_FILE.read_text())
-        if time.time() - obj["ts"] < 300:
+        if time.time() - obj["ts"] < 120:
             return obj["data"]
     except (OSError, KeyError, json.JSONDecodeError):
         pass
