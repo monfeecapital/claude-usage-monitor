@@ -48,7 +48,16 @@ Restart Claude Code — the statusLine appears automatically.
 
 ## How it works
 
-Calls `https://api.anthropic.com/api/oauth/usage` using the OAuth token that Claude Code already stores in `~/.claude/.credentials.json`. No separate credentials needed.
+Calls `https://api.anthropic.com/api/oauth/usage` using the OAuth token that Claude Code already stores. No separate credentials needed.
+
+The token is read from wherever Claude Code keeps it on your platform:
+
+| Platform | Token storage |
+|----------|---------------|
+| Linux · WSL | `~/.claude/.credentials.json` (plain JSON) |
+| macOS | macOS Keychain, service `Claude Code-credentials` (read via the built-in `security` tool) |
+
+The JSON structure is identical in both cases — only the storage mechanism differs. The script tries the file first and falls back to the Keychain automatically, so there's nothing extra to configure.
 
 The statusLine reads from a local cache file so it responds instantly without making a network request on every keypress. The cache refreshes every 5 minutes automatically.
 
