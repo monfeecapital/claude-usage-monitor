@@ -5,7 +5,7 @@ Real data from https://api.anthropic.com/api/oauth/usage
 Format mirrors the Claude app usage panel.
 """
 
-import json, os, sys, time, argparse
+import json, os, sys, time, argparse, subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,19 +24,42 @@ try:
 except ImportError:
     HAS_RICH = False
 
-CREDS_FILE  = Path.home() / ".claude" / ".credentials.json"
+CREDS_FILE   = Path.home() / ".claude" / ".credentials.json"
+KEYCHAIN_SVC = "Claude Code-credentials"
 CACHE_FILE  = Path.home() / ".claude" / "scripts" / "usage-cache.json"
 API_URL     = "https://api.anthropic.com/api/oauth/usage"
 BETA_HEADER = "oauth-2025-04-20"
 
 # ── credentials ────────────────────────────────────────────────────────────────
 
+def _token_from_creds(creds: dict) -> str:
+    return creds.get("claudeAiOauth", {}).get("accessToken", "")
+
 def load_token() -> str:
+    """Load the OAuth access token.
+
+    Storage differs per platform:
+      - Linux / WSL: plain JSON in ~/.claude/.credentials.json
+      - macOS: macOS Keychain under service "Claude Code-credentials"
+    The JSON structure is identical in both cases; only the storage differs.
+    """
+    # 1. File (Linux / WSL)
     try:
         with open(CREDS_FILE) as f:
-            creds = json.load(f)
-        return creds.get("claudeAiOauth", {}).get("accessToken", "")
+            token = _token_from_creds(json.load(f))
+        if token:
+            return token
     except (OSError, json.JSONDecodeError, KeyError):
+        pass
+
+    # 2. macOS Keychain fallback (no-op on Linux/WSL: `security` is absent)
+    try:
+        raw = subprocess.check_output(
+            ["security", "find-generic-password", "-s", KEYCHAIN_SVC, "-w"],
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+        return _token_from_creds(json.loads(raw))
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
         return ""
 
 # ── API ────────────────────────────────────────────────────────────────────────
@@ -177,7 +200,7 @@ def main():
 
     token = load_token()
     if not token:
-        print("Error: token not found in ~/.claude/.credentials.json", file=sys.stderr)
+        print("Error: OAuth token not found (checked ~/.claude/.credentials.json and macOS Keychain)", file=sys.stderr)
         sys.exit(1)
 
     def get_and_print():
